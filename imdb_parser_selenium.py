@@ -1,8 +1,8 @@
+import logging
 from dataclasses import dataclass
 from urllib.parse import urlparse, urlunparse
 
 from selenium import webdriver
-from selenium.webdriver import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -20,20 +20,27 @@ class Actor:
 
 def get_top_250_movies(driver: webdriver):
     driver.get("https://www.imdb.com/chart/top/?ref_=nv_mv_250")
-    print(driver.page_source)
 
     WebDriverWait(driver, 10).until(
         EC.presence_of_all_elements_located(
             (
                 By.CSS_SELECTOR,
-                "div.ipc-title.ipc-title--base.ipc-title--title.ipc-title-link-no-icon.ipc-title--on-textPrimary.sc-b189961a-9.bnSrml.cli-title",
+                (
+                    "div.ipc-title.ipc-title--base.ipc-title--title."
+                    "ipc-title-link-no-icon.ipc-title--on-textPrimary."
+                    "sc-b189961a-9.bnSrml.cli-title"
+                ),
             )
         )
     )
 
     movies = driver.find_elements(
         By.CSS_SELECTOR,
-        "div.ipc-title.ipc-title--base.ipc-title--title.ipc-title-link-no-icon.ipc-title--on-textPrimary.sc-b189961a-9.bnSrml.cli-title",
+        (
+            "div.ipc-title.ipc-title--base.ipc-title--title."
+            "ipc-title-link-no-icon.ipc-title--on-textPrimary."
+            "sc-b189961a-9.bnSrml.cli-title"
+        ),
     )
     movie_urls = [
         movie.find_element(By.TAG_NAME, "a").get_attribute("href")
@@ -50,7 +57,7 @@ def get_cast(movie_url: str, driver: webdriver):
 
     full_cast_url = urlunparse(parsed_url._replace(path=new_path))
 
-    print(full_cast_url)
+    logging.info(f"Fetching cast for movie: {full_cast_url}")
 
     driver.get(full_cast_url)
 
@@ -76,7 +83,10 @@ def get_cast(movie_url: str, driver: webdriver):
             )
 
         if "Rest of cast" in row.text:
+            logging.info("Reached 'Rest of cast', stopping.")
             break
+
+    logging.info(f"Fetched {len(cast)} actors for movie: {full_cast_url}")
 
     return cast
 
@@ -84,15 +94,28 @@ def get_cast(movie_url: str, driver: webdriver):
 def main():
     start_time = time.time()
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("imdb_parser.log", mode="w"),
+            logging.StreamHandler(),
+        ],
+    )
+
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Работа в headless режиме
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument(
         "--disable-blink-features=AutomationControlled"
     )
     chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+        (
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/114.0.0.0 Safari/537.36"
+        )
     )
 
     driver = webdriver.Chrome(options=chrome_options)
@@ -110,14 +133,14 @@ def main():
 
     df = pd.DataFrame(data)
     df.to_csv("imdb_top250_cast.csv", index=False)
-    print(
-        "Парсинг завершен. Результаты сохранены в файле 'imdb_top250_cast.csv'."
+    logging.info(
+        "Parsing completed. Results saved to file 'imdb_top250_cast.csv'."
     )
 
     end_time = time.time()
     execution_time = end_time - start_time
 
-    print(f"Execution time: {round(execution_time / 60, 1)} min")
+    logging.info(f"Execution time: {round(execution_time / 60, 1)} min")
 
 
 if __name__ == "__main__":

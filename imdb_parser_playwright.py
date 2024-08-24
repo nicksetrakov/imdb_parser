@@ -53,7 +53,6 @@ async def get_cast(movie_url: str, context, semaphore) -> list[Actor]:
         page = await context.new_page()
         await page.goto(full_cast_url)
         await page.wait_for_load_state("load", timeout=60000)
-        # await page.wait_for_selector(".cast_list")
 
         cast = []
         rows = await page.locator(".cast_list tr").all()
