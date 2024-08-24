@@ -125,7 +125,6 @@ def main():
         data = []
 
         for movie_url in movies:
-            print(movie_url)
             cast = get_cast(movie_url, driver)
             data.extend(cast)
     finally:
